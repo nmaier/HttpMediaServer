@@ -56,6 +56,7 @@ void Sleep(int ms) {
 #include <stdlib.h>
 #include <time.h>
 
+#include <iostream>
 #include <sstream>
 
 #include "PathEnumerator.h"
@@ -103,7 +104,7 @@ Response::Response(RequestParser p)
     int result;
     result = _stat64(target.c_str(), &buf );
     if (result == -1) {
-      printf("File not found\n", result);
+      std::cerr << "File not found" << std::endl;
       mode = ERROR_FILE_NOT_EXIST;
     } else if (result != 0) {
       mode = INTERNAL_ERROR;
@@ -162,7 +163,7 @@ bool Response::SendHeaders(Socket* aSocket) {
   headers.append(ExtractContentType(path, mode));
   headers.append("\r\n\r\n");
 
-  printf("Sending Headers %d:\n%s\n", parser.id, headers.c_str());
+  std::cout << "Sending Headers " << parser.id << std::endl << headers;
 
   return aSocket->Send(headers.c_str(), (int)headers.size()) != -1;
 }
@@ -170,7 +171,7 @@ bool Response::SendHeaders(Socket* aSocket) {
 // Returns true if we need to call again.
 bool Response::SendBody(Socket *aSocket) {
   if (mode == ERROR_FILE_NOT_EXIST) {
-    printf("Sent (empty) body (%d)\n", parser.id);
+    std::cout << "Sent (empty) body (" << parser.id << ")" << std::endl;
     return false;
   }
 
