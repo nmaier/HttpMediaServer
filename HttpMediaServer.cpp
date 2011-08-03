@@ -44,11 +44,7 @@
 
 using std::auto_ptr;
 
-#ifdef WIN32
-#define PORT 80
-#else
 #define PORT 8080
-#endif
 
 class Connection : public Runnable{
 public:
