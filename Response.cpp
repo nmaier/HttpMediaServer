@@ -56,6 +56,9 @@ void Sleep(int ms) {
 #include <stdlib.h>
 #include <time.h>
 
+#include <sstream>
+
+#include "PathEnumerator.h"
 #include "Response.h"
 #include "Utils.h"
 
@@ -91,6 +94,7 @@ Response::Response(RequestParser p)
   string target = parser.GetTarget();
   if (target == "") {
     mode = DIR_LIST;
+    path = ".";
   } else if (target.find("..") != string::npos) {
     mode = ERROR_FILE_NOT_EXIST;
   } else {
@@ -172,9 +176,10 @@ bool Response::SendBody(Socket *aSocket) {
 
   int len = 1024;
   unsigned wait = 0;
+  string rateStr;
   if (ContainsKey(parser.GetParams(), "rate")) {
     const map<string,string> params = parser.GetParams();
-    string rateStr = params.find("rate")->second;
+    rateStr = params.find("rate")->second;
     double rate = atof(rateStr.c_str());
     const double period = 0.1;
     if (rate <= 0.0) {
@@ -270,6 +275,29 @@ bool Response::SendBody(Socket *aSocket) {
 
     // Else we tranmitted that segment, we're ok.
     return true;
+  }
+  else if (mode == DIR_LIST) {
+    std::stringstream response;
+    PathEnumerator *enumerator = PathEnumerator::getEnumerator(path);
+    if (enumerator) {
+      response << "<!DOCTYPE html>\n<ul>";
+      string href;
+      while (enumerator->next(href)) {
+        if (href == "." || path == "." && href == "..") {
+          continue;
+        }
+        response << "<li><a href=\"" << path + "/" + href;
+        if (!rateStr.empty()) {
+          response << "?rate=" + rateStr;
+        }
+        response << "\">" << href << "</a></li>";
+      }
+      response << "</ul>";
+      delete enumerator;
+    }
+    string _r = response.str();
+    aSocket->Send(_r.c_str(), (int)_r.size());
+    return false;
   }
 
   return false;
